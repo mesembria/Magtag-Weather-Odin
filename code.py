@@ -1,3 +1,4 @@
+# SPDX-FileContributor: Modified by Philippe Moore
 # SPDX-FileCopyrightText: 2020 Carter Nelson for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
@@ -12,9 +13,6 @@ from secrets import secrets
 from adafruit_display_shapes.rect import Rect
 from adafruit_fakerequests import Fake_Requests
 
-# --| USER CONFIG |--------------------------
-METRIC = False  # set to True for metric units
-# -------------------------------------------
 
 # ----------------------------
 # Define various assets
@@ -31,6 +29,19 @@ icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
 # /////////////////////////////////////////////////////////////////////////
 
 def get_icon(code):
+    """
+    This function retrieves the corresponding icon for a given weather code.
+
+    Parameters:
+    code (str): A string representing the weather code. The weather code is expected 
+    to be in the format 'XYn', where 'X' and 'Y' are any characters, and 'n' is a digit.
+
+    Returns:
+    str: The icon corresponding to the given weather code. If no exact match is found, 
+    the function returns the icon for the 'XYX' code. If no 'XYX' code exists, 
+    the function returns None.
+
+    """    
     for icon in ICON_MAP:
         if icon[:2] == code[:2]:
             if icon[2:3] == "X":
@@ -38,8 +49,22 @@ def get_icon(code):
             elif icon[2:3] == code[2:3]:
                 return ICON_MAP[icon]
 
+
 def get_data_source_url(lat, long):
-    """Build and return the URL for the OpenWeather API."""
+    """
+    This function builds and returns the URL for the OpenWeather API.
+
+    Parameters:
+    lat (float): The latitude of the location for which weather data is required.
+    long (float): The longitude of the location for which weather data is required.
+
+    Returns:
+    str: The complete URL for the OpenWeather API with the provided latitude and longitude.
+
+    Note:
+    The function uses a global variable 'secrets' which is a dictionary containing the 'openweather_token'.
+    Make sure to define this variable and set the 'openweather_token' before calling this function.
+    """
 
     URL = "https://api.openweathermap.org/data/3.0/onecall?"
     URL += "&lat={}".format(lat)
@@ -58,6 +83,23 @@ def get_forecast(lat, long):
     return json_data["hourly"], json_data["current"]["dt"], json_data["timezone_offset"]
 
 def format_forcast_data(forecast_data, local_tz_offset):
+    """
+    This function formats the forecast data for each hour.
+
+    Parameters:
+    forecast_data (list): A list of dictionaries where each dictionary contains weather forecast data for a specific hour.
+    local_tz_offset (int): The timezone offset in seconds for the location for which the forecast data is obtained.
+
+    Returns:
+    list: A list of dictionaries where each dictionary contains formatted weather forecast data for a specific hour.
+
+    Each dictionary in the returned list has the following keys:
+    - "time": The timestamp of the forecast data.
+    - "hour": The hour of the day (in local time) for which the forecast data is applicable.
+    - "temp": The forecasted temperature.
+    - "icon": The icon code for the forecasted weather condition.
+    - "pop": The probability of precipitation.
+    """    
     hour_list = []
 
     # Assuming this is ordered list
@@ -73,7 +115,19 @@ def format_forcast_data(forecast_data, local_tz_offset):
 
     return hour_list
 
-def get_temp_range(hour_list, lookahead):
+def get_temp_range(hour_list):
+    """
+    This function calculates the minimum and range of temperatures for a given list of hourly forecast data.
+
+    Parameters:
+    hour_list (list): A list of dictionaries where each dictionary contains weather forecast data for a specific hour.
+
+    Returns:
+    tuple: A tuple containing two elements:
+        - The minimum temperature in the given forecast data.
+        - The range of temperatures in the given forecast data (i.e., max temperature - min temperature).
+
+    """    
     max_temp = 0
     min_temp = 100
     range = 0
@@ -88,7 +142,26 @@ def get_temp_range(hour_list, lookahead):
 
 
 def build_temp_group(hour_list, x, y, group_height, num_hours, hour_step):
+    """
+    This function builds a displayio.Group object that represents a temperature forecast graph.
 
+    Parameters:
+    hour_list (list): A list of dictionaries where each dictionary contains weather forecast 
+    data for a specific hour.
+    x (int): The x-coordinate where the group will be placed on the display.
+    y (int): The y-coordinate where the group will be placed on the display.
+    group_height (int): The height of the group on the display.
+    num_hours (int): The number of hours to be displayed in the graph.
+    hour_step (int): The step size to use when iterating over the hours in hour_list.
+
+    Returns:
+    displayio.Group: A displayio.Group object that represents a temperature forecast graph.
+
+    The function creates a displayio.Group object and populates it with displayio.TileGrid and 
+    label.Label objects that represent the weather icon and temperature for each hour in the forecast. 
+    The height of each icon and label in the group is determined by the temperature for that hour.
+    """
+   
     width = magtag.graphics.display.width
     group = displayio.Group(x=x,y=y)
 
@@ -133,7 +206,22 @@ def build_temp_group(hour_list, x, y, group_height, num_hours, hour_step):
     return group
 
 def build_precip_display(hour_list, x, y, group_height, num_hours, hour_step):
+    """
+    This function builds a displayio.Group object that represents a precipitation forecast graph.
 
+    Parameters:
+    hour_list (list): A list of dictionaries where each dictionary contains weather forecast data for a specific hour.
+    x (int): The x-coordinate where the group will be placed on the display.
+    y (int): The y-coordinate where the group will be placed on the display.
+    group_height (int): The height of the group on the display.
+    num_hours (int): The number of hours to be displayed in the graph.
+    hour_step (int): The step size to use when iterating over the hours in hour_list.
+
+    Returns:
+    displayio.Group: A displayio.Group object that represents a precipitation forecast graph.
+
+    The function creates a displayio.Group object and populates it with Rect objects that represent the probability of precipitation for each hour in the forecast. The height of each Rect in the group is determined by the probability of precipitation for that hour. If the probability of precipitation for an hour is greater than 0.3, a label is also added to the group to display the probability as a percentage.
+    """
     group = displayio.Group(x=x,y=y)
     width = magtag.graphics.display.width
     col_width = int(width / num_hours)
@@ -166,6 +254,24 @@ def build_precip_display(hour_list, x, y, group_height, num_hours, hour_step):
 
 
 def build_hour_group(hour_list, x, y, group_height, num_hours, hour_step):
+    """
+    This function builds a displayio.Group object that represents the hours in the forecast.
+
+    Parameters:
+    hour_list (list): A list of dictionaries where each dictionary contains weather forecast
+    data for a specific hour.
+    x (int): The x-coordinate where the group will be placed on the display.
+    y (int): The y-coordinate where the group will be placed on the display.
+    group_height (int): The height of the group on the display.
+    num_hours (int): The number of hours to be displayed in the graph.
+    hour_step (int): The step size to use when iterating over the hours in hour_list.
+
+    Returns:
+    displayio.Group: A displayio.Group object that represents the hours in the forecast.
+
+    The function creates a displayio.Group object and populates it with label.Label objects that
+    represent the hour labels for each hour in the forecast.
+    """
 
     width = magtag.graphics.display.width
     col_width = int(width / num_hours)
@@ -237,6 +343,7 @@ pop_height = 18
 hour_height = 16
 temp_height = int(height - pop_height - hour_height)+2
 
+# Draw the temp, the precip chance, and then the hours
 temp_group = build_temp_group(hour_list, 0, 0, temp_height, num_hours, hour_step)
 precip_group = build_precip_display(hour_list, 0, temp_height, pop_height, num_hours, hour_step)
 hour_group = build_hour_group(hour_list, 0, temp_height+pop_height+4, hour_height, num_hours, hour_step)
