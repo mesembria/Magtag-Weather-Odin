@@ -1,5 +1,6 @@
 # MagTag Weather Odin
 
+
 A CircuitPython project that displays weather information in a clean, user-friendly format on an Adafruit MagTag e-paper display. Inspired by the Odin display from the Carrot Weather app, this project provides an easy-to-read daily weather forecast that updates periodically.
 
 ## Features
@@ -71,6 +72,7 @@ This project uses the [OpenWeather One Call API 3.0](https://openweathermap.org/
 ## Inspiration
 This project is based on the [MagTag Daily Weather Forecast Display](https://learn.adafruit.com/magtag-weather/) and inspired by the Carrot Weather app's Odin display:
 
+
 <figure>
   <img src="https://github.com/mesembria/magtag_weather_odin/assets/6217774/e7298e5b-3a08-4e74-806b-e9e1ef17edb7" width="600" />
 </figure>
@@ -84,6 +86,8 @@ This project is based on the [MagTag Daily Weather Forecast Display](https://lea
 ![IMG_5530](https://github.com/mesembria/magtag_weather_odin/assets/6217774/f213587d-b09b-4a84-b20b-854b044b2018)
 ![IMG_5532](https://github.com/mesembria/magtag_weather_odin/assets/6217774/e105ea66-8bc3-4509-9d20-08bb5a2032c1)
 
+
 ## License
 
 See [LICENSE](LICENSE) file for details.
+
