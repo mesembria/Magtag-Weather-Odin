@@ -159,7 +159,7 @@ def get_temp_range(hour_list):
     min_temp = 100
     range = 0
 
-    for hour_obj in forecast_data:
+    for hour_obj in hour_list:
         if hour_obj["temp"] > max_temp:
             max_temp = hour_obj["temp"]
         if hour_obj["temp"] < min_temp:
@@ -193,7 +193,7 @@ def build_temp_group(hour_list, x, y, group_height, num_hours, hour_step):
     group = displayio.Group(x=x,y=y)
 
     col_width = int(width / num_hours)
-    min_temp, temp_range = get_temp_range(hour_list, 24)
+    min_temp, temp_range = get_temp_range(hour_list)
 
     icon_temp_height = 20 + 10
 
@@ -221,7 +221,7 @@ def build_temp_group(hour_list, x, y, group_height, num_hours, hour_step):
             tile_height=20,
         )
         group.append(icon)
-        icon_index = get_icon(hour_list[hour_index]["icon"])
+        icon_index = get_icon(hour_list[hour_index]["icon"], hour_list[hour_index]["is_daytime"])
         icon[0] = icon_index
 
         # Temperature
