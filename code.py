@@ -120,44 +120,26 @@ def get_data_source_url(lat, lng):
 
 
 def get_forecast(lat, long):
-    """Use OneCall API to fetch forecast and timezone data."""
+    """Fetch hourly forecast from Google Weather API."""
     resp = magtag.network.fetch(get_data_source_url(lat=lat, long=long))
-    #resp = Fake_Requests("response.txt")
+    #resp = Fake_Requests("google_response.txt")
     json_data = resp.json()
-    # Would be nice to have error checking here
-    return json_data["hourly"], json_data["current"]["dt"], json_data["timezone_offset"]
+    hours = json_data["forecastHours"]
+    utc_epoch = parse_iso_to_epoch(hours[0]["interval"]["startTime"])
+    tz_offset = int(hours[0]["displayDateTime"]["utcOffset"].rstrip("s"))
+    return hours, utc_epoch + tz_offset
 
-def format_forcast_data(forecast_data, local_tz_offset):
-    """
-    This function formats the forecast data for each hour.
-
-    Parameters:
-    forecast_data (list): A list of dictionaries where each dictionary contains weather forecast data for a specific hour.
-    local_tz_offset (int): The timezone offset in seconds for the location for which the forecast data is obtained.
-
-    Returns:
-    list: A list of dictionaries where each dictionary contains formatted weather forecast data for a specific hour.
-
-    Each dictionary in the returned list has the following keys:
-    - "time": The timestamp of the forecast data.
-    - "hour": The hour of the day (in local time) for which the forecast data is applicable.
-    - "temp": The forecasted temperature.
-    - "icon": The icon code for the forecasted weather condition.
-    - "pop": The probability of precipitation.
-    """    
+def format_forcast_data(forecast_data):
+    """Format Google Weather API hourly data into display-ready dicts."""
     hour_list = []
-
-    # Assuming this is ordered list
     for hour_obj in forecast_data:
-        hr_forecast = {};
-        date = time.localtime(hour_obj["dt"]+local_tz_offset)
-        hr_forecast["time"] = hour_obj["dt"]
-        hr_forecast["hour"] = date[3]
-        hr_forecast["temp"] = hour_obj["temp"]
-        hr_forecast["icon"] =hour_obj["weather"][0]["icon"]
-        hr_forecast["pop"] = hour_obj["pop"]
-        hour_list.append(hr_forecast)
-
+        hr = {}
+        hr["hour"] = hour_obj["displayDateTime"]["hours"]
+        hr["temp"] = hour_obj["temperature"]["degrees"] * 9 / 5 + 32
+        hr["icon"] = hour_obj["weatherCondition"]["type"]
+        hr["is_daytime"] = hour_obj["isDaytime"]
+        hr["pop"] = hour_obj["precipitation"]["probability"]["percent"] / 100
+        hour_list.append(hr)
     return hour_list
 
 def get_temp_range(hour_list):
@@ -375,9 +357,9 @@ def go_to_sleep(current_time):
 print("Fetching forecast...")
 lat = secrets["lat"]
 long = secrets["long"]
-forecast_data, utc_time, local_tz_offset = get_forecast(lat, long)
+forecast_data, local_time = get_forecast(lat, long)
 
-hour_list = format_forcast_data(forecast_data, local_tz_offset)
+hour_list = format_forcast_data(forecast_data)
 
 
 num_hours = 9
@@ -405,7 +387,7 @@ magtag.display.refresh()
 time.sleep(magtag.display.time_to_refresh + 1)
 
 print("Sleeping...")
-go_to_sleep(utc_time + local_tz_offset)
+go_to_sleep(local_time)
 #  entire code will run again after deep sleep cycle
 #  similar to hitting the reset button
 
