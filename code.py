@@ -441,7 +441,7 @@ if resp.status_code != 200:
 
 try:
     forecast_data, local_time = parse_forecast(resp)
-except (KeyError, ValueError):
+except (KeyError, ValueError, IndexError):
     show_error("DATA ERROR", "Unexpected API response", (128, 0, 128))
 
 hour_list = format_forcast_data(forecast_data)
