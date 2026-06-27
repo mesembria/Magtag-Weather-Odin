@@ -59,6 +59,17 @@ ICON_MAP = {
     "HEAVY_SNOW_STORM":         7,
     "BLOWING_SNOW":             7,
     "RAIN_AND_SNOW":            7,
+    # Fog / atmospheric (tile 8)
+    "FOG":                      8,
+    "FOGGY":                    8,
+    "HAZE":                     8,
+    "SMOKE":                    8,
+    # Freezing / mixed precip (tile 5 = light rain)
+    "DRIZZLE":                  5,
+    "FREEZING_DRIZZLE":         5,
+    "FREEZING_RAIN":            5,
+    "SLEET":                    7,
+    "ICE_PELLETS":              7,
     "TYPE_UNSPECIFIED":         0,
 }
 
@@ -121,7 +132,7 @@ def get_data_source_url(lat, lng):
 
 def get_forecast(lat, long):
     """Fetch hourly forecast from Google Weather API."""
-    resp = magtag.network.fetch(get_data_source_url(lat=lat, long=long))
+    resp = magtag.network.fetch(get_data_source_url(lat, long))
     #resp = Fake_Requests("google_response.txt")
     json_data = resp.json()
     hours = json_data["forecastHours"]
