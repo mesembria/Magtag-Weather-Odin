@@ -6,14 +6,14 @@
 import time
 import terminalio
 import displayio
+import alarm
+import board
 import adafruit_imageload
 from adafruit_display_text import label
 from adafruit_magtag.magtag import MagTag
 from secrets import secrets
 from adafruit_display_shapes.rect import Rect
 from adafruit_fakerequests import Fake_Requests
-import alarm
-import board
 
 
 # ----------------------------
@@ -362,6 +362,51 @@ def go_to_sleep(current_time):
     alarm.exit_and_deep_sleep_until_alarms(time_alarm, *button_alarms)
 
 
+def show_error(title, detail, led_color):
+    """Show an error screen on the e-ink display, signal via neopixels, then deep sleep 30 min."""
+    print("Error:", title, "-", detail)
+
+    magtag.peripherals.neopixels.fill(led_color)
+
+    while len(magtag.splash) > 0:
+        magtag.splash.pop()
+
+    error_group = displayio.Group()
+
+    bg = Rect(0, 0, magtag.graphics.display.width, magtag.graphics.display.height, fill=0xFFFFFF)
+    error_group.append(bg)
+
+    title_label = label.Label(terminalio.FONT, text=title, color=0x000000, scale=2)
+    title_label.anchor_point = (0.5, 0)
+    title_label.anchored_position = (magtag.graphics.display.width // 2, 20)
+    error_group.append(title_label)
+
+    detail_label = label.Label(terminalio.FONT, text=detail, color=0x000000)
+    detail_label.anchor_point = (0.5, 0)
+    detail_label.anchored_position = (magtag.graphics.display.width // 2, 68)
+    error_group.append(detail_label)
+
+    sync_label = label.Label(terminalio.FONT, text="Press any button to sync", color=0x000000)
+    sync_label.anchor_point = (0.5, 0)
+    sync_label.anchored_position = (magtag.graphics.display.width // 2, 92)
+    error_group.append(sync_label)
+
+    magtag.splash.append(error_group)
+
+    time.sleep(magtag.display.time_to_refresh + 1)
+    magtag.display.refresh()
+    time.sleep(magtag.display.time_to_refresh + 1)
+
+    magtag.peripherals.neopixels.fill((0, 0, 0))
+
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 1800)
+    button_alarms = [
+        alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_B, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_C, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_D, value=False, pull=True),
+    ]
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *button_alarms)
 
 
 
