@@ -18,7 +18,49 @@ from adafruit_fakerequests import Fake_Requests
 # Define various assets
 # ----------------------------
 ICONS_SMALL_FILE = "/bmps/weather_icons_20px.bmp"
-ICON_MAP = {"01d": 0, "01n": 9, "02d": 1, "02n": 10, "03X": 2, "04X": 3, "09X": 4, "10X": 5, "11X": 6, "13X": 7, "50X": 8}
+ICON_MAP = {
+    "CLEAR":                    (0, 9),
+    "MOSTLY_CLEAR":             (0, 9),
+    "PARTLY_CLOUDY":            (1, 10),
+    "MOSTLY_CLOUDY":            2,
+    "CLOUDY":                   3,
+    "WINDY":                    11,
+    "WIND_AND_RAIN":            4,
+    "LIGHT_RAIN":               5,
+    "LIGHT_RAIN_SHOWERS":       5,
+    "CHANCE_OF_SHOWERS":        5,
+    "SCATTERED_SHOWERS":        5,
+    "LIGHT_TO_MODERATE_RAIN":   5,
+    "RAIN_SHOWERS":             4,
+    "HEAVY_RAIN_SHOWERS":       4,
+    "RAIN":                     4,
+    "MODERATE_TO_HEAVY_RAIN":   4,
+    "HEAVY_RAIN":               4,
+    "RAIN_PERIODICALLY_HEAVY":  4,
+    "THUNDERSTORM":             6,
+    "THUNDERSHOWER":            6,
+    "LIGHT_THUNDERSTORM_RAIN":  6,
+    "SCATTERED_THUNDERSTORMS":  6,
+    "HEAVY_THUNDERSTORM":       6,
+    "HAIL":                     6,
+    "HAIL_SHOWERS":             6,
+    "LIGHT_SNOW_SHOWERS":       7,
+    "CHANCE_OF_SNOW_SHOWERS":   7,
+    "SCATTERED_SNOW_SHOWERS":   7,
+    "SNOW_SHOWERS":             7,
+    "HEAVY_SNOW_SHOWERS":       7,
+    "LIGHT_TO_MODERATE_SNOW":   7,
+    "MODERATE_TO_HEAVY_SNOW":   7,
+    "SNOW":                     7,
+    "LIGHT_SNOW":               7,
+    "HEAVY_SNOW":               7,
+    "SNOWSTORM":                7,
+    "SNOW_PERIODICALLY_HEAVY":  7,
+    "HEAVY_SNOW_STORM":         7,
+    "BLOWING_SNOW":             7,
+    "RAIN_AND_SNOW":            7,
+    "TYPE_UNSPECIFIED":         0,
+}
 
 
 magtag = MagTag()
@@ -28,26 +70,22 @@ icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
 
 # /////////////////////////////////////////////////////////////////////////
 
-def get_icon(code):
+def get_icon(condition_type, is_daytime):
     """
-    This function retrieves the corresponding icon for a given weather code.
+    This function retrieves the corresponding icon for a given Google Weather condition type.
 
     Parameters:
-    code (str): A string representing the weather code. The weather code is expected 
-    to be in the format 'XYn', where 'X' and 'Y' are any characters, and 'n' is a digit.
+    condition_type (str): A string representing the Google Weather condition type enum.
+    is_daytime (bool): Whether it is currently daytime (True) or nighttime (False).
 
     Returns:
-    str: The icon corresponding to the given weather code. If no exact match is found, 
-    the function returns the icon for the 'XYX' code. If no 'XYX' code exists, 
-    the function returns None.
-
-    """    
-    for icon in ICON_MAP:
-        if icon[:2] == code[:2]:
-            if icon[2:3] == "X":
-                return ICON_MAP[icon]
-            elif icon[2:3] == code[2:3]:
-                return ICON_MAP[icon]
+    int: The icon tile index (0–11) corresponding to the given condition type and time of day.
+    Unknown condition types default to tile 0.
+    """
+    entry = ICON_MAP.get(condition_type, 0)
+    if isinstance(entry, tuple):
+        return entry[0] if is_daytime else entry[1]
+    return entry
 
 
 def get_data_source_url(lat, long):
