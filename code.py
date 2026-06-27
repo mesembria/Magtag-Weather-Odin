@@ -332,6 +332,17 @@ def build_hour_group(hour_list, x, y, group_height, num_hours, hour_step):
 
     return group
 
+
+def _make_button_alarms():
+    """Create button alarms for all four MagTag buttons."""
+    return [
+        alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_B, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_C, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_D, value=False, pull=True),
+    ]
+
+
 def go_to_sleep(current_time):
     """Enter deep sleep until next sync time; any button press also wakes the device."""
     hour, minutes, seconds = time.localtime(current_time)[3:6]
@@ -349,13 +360,7 @@ def go_to_sleep(current_time):
         )
     )
     time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + seconds_to_sleep)
-    button_alarms = [
-        alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True),
-        alarm.pin.PinAlarm(pin=board.BUTTON_B, value=False, pull=True),
-        alarm.pin.PinAlarm(pin=board.BUTTON_C, value=False, pull=True),
-        alarm.pin.PinAlarm(pin=board.BUTTON_D, value=False, pull=True),
-    ]
-    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *button_alarms)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *_make_button_alarms())
 
 
 def show_error(title, detail, led_color):
@@ -396,13 +401,7 @@ def show_error(title, detail, led_color):
     magtag.peripherals.neopixels.fill((0, 0, 0))
 
     time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 1800)
-    button_alarms = [
-        alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True),
-        alarm.pin.PinAlarm(pin=board.BUTTON_B, value=False, pull=True),
-        alarm.pin.PinAlarm(pin=board.BUTTON_C, value=False, pull=True),
-        alarm.pin.PinAlarm(pin=board.BUTTON_D, value=False, pull=True),
-    ]
-    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *button_alarms)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *_make_button_alarms())
 
 
 
