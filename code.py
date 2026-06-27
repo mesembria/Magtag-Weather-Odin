@@ -414,6 +414,13 @@ def show_error(title, detail, led_color):
 #  M A I N
 # ===========
 
+voltage = magtag.peripherals.battery
+if voltage < 3.5:
+    show_error(
+        "LOW BATTERY",
+        "Charge soon ({:.1f}V)".format(voltage),
+        (255, 255, 0)
+    )
 
 print("Fetching forecast...")
 lat = secrets["lat"]
