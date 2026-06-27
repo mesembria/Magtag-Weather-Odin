@@ -12,6 +12,8 @@ from adafruit_magtag.magtag import MagTag
 from secrets import secrets
 from adafruit_display_shapes.rect import Rect
 from adafruit_fakerequests import Fake_Requests
+import alarm
+import board
 
 
 # ----------------------------
@@ -335,26 +337,29 @@ def build_hour_group(hour_list, x, y, group_height, num_hours, hour_step):
     return group
 
 def go_to_sleep(current_time):
-    """Enter deep sleep for time needed."""
-    # compute current time offset in seconds
+    """Enter deep sleep until next sync time; any button press also wakes the device."""
     hour, minutes, seconds = time.localtime(current_time)[3:6]
 
-    # if after 8pm, sleep until 6am
     if hour > 20:
-        seconds_to_sleep = ((((24-hour) * 60) - minutes) + (6 * 60)) * 60
-    # else if after midnight, but before 6, sleep till 6am
+        seconds_to_sleep = ((((24 - hour) * 60) - minutes) + (6 * 60)) * 60
     elif hour < 6:
-        seconds_to_sleep = (((6-hour) * 60) - minutes) * 60
-    # else, sleep until the next hour
+        seconds_to_sleep = (((6 - hour) * 60) - minutes) * 60
     else:
-        seconds_to_sleep = (((hour % 2) * 60) + (60-minutes)) * 60
+        seconds_to_sleep = (((hour % 2) * 60) + (60 - minutes)) * 60
 
     print(
         "Sleeping for {} hours, {} minutes".format(
             seconds_to_sleep // 3600, (seconds_to_sleep // 60) % 60
         )
     )
-    magtag.exit_and_deep_sleep(seconds_to_sleep)
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + seconds_to_sleep)
+    button_alarms = [
+        alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_B, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_C, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_D, value=False, pull=True),
+    ]
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *button_alarms)
 
 
 
