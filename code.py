@@ -87,8 +87,6 @@ def parse_iso_to_epoch(s):
 
 magtag = MagTag()
 
-icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
-
 
 # /////////////////////////////////////////////////////////////////////////
 
@@ -132,10 +130,8 @@ def get_data_source_url(lat, lng):
     )
 
 
-def get_forecast(lat, long):
-    """Fetch hourly forecast from Google Weather API."""
-    resp = magtag.network.fetch(get_data_source_url(lat, long))
-    #resp = Fake_Requests("google_response.txt")
+def parse_forecast(resp):
+    """Parse Google Weather API response into forecast hours and local epoch time."""
     json_data = resp.json()
     hours = json_data["forecastHours"]
     utc_epoch = parse_iso_to_epoch(hours[0]["interval"]["startTime"])
@@ -422,10 +418,31 @@ if voltage < 3.5:
         (255, 255, 0)
     )
 
-print("Fetching forecast...")
+try:
+    icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
+except OSError:
+    show_error("MISSING FILE", "weather_icons_20px.bmp not found", (255, 255, 255))
+
 lat = secrets["lat"]
 long = secrets["long"]
-forecast_data, local_time = get_forecast(lat, long)
+
+print("Fetching forecast...")
+try:
+    resp = magtag.network.fetch(get_data_source_url(lat, long))
+except (ConnectionError, OSError):
+    show_error("NO NETWORK", "Could not connect to WiFi", (255, 0, 0))
+
+if resp.status_code != 200:
+    show_error(
+        "API ERROR",
+        "Server returned {}".format(resp.status_code),
+        (255, 165, 0)
+    )
+
+try:
+    forecast_data, local_time = parse_forecast(resp)
+except (KeyError, ValueError):
+    show_error("DATA ERROR", "Unexpected API response", (128, 0, 128))
 
 hour_list = format_forcast_data(forecast_data)
 
