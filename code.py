@@ -444,35 +444,34 @@ try:
 except (KeyError, ValueError, IndexError):
     show_error("DATA ERROR", "Unexpected API response", (128, 0, 128))
 
-hour_list = format_forcast_data(forecast_data)
+try:
+    hour_list = format_forcast_data(forecast_data)
 
+    num_hours = 9
+    hour_step = 2
 
-num_hours = 9
-hour_step = 2
+    height = magtag.graphics.display.height
+    pop_height = 18
+    hour_height = 16
+    temp_height = int(height - pop_height - hour_height) + 2
 
-height = magtag.graphics.display.height
-pop_height = 18
-hour_height = 16
-temp_height = int(height - pop_height - hour_height)+2
+    temp_group = build_temp_group(hour_list, 0, 0, temp_height, num_hours, hour_step)
+    precip_group = build_precip_display(hour_list, 0, temp_height, pop_height, num_hours, hour_step)
+    hour_group = build_hour_group(hour_list, 0, temp_height + pop_height + 4, hour_height, num_hours, hour_step)
 
-# Draw the temp, the precip chance, and then the hours
-temp_group = build_temp_group(hour_list, 0, 0, temp_height, num_hours, hour_step)
-precip_group = build_precip_display(hour_list, 0, temp_height, pop_height, num_hours, hour_step)
-hour_group = build_hour_group(hour_list, 0, temp_height+pop_height+4, hour_height, num_hours, hour_step)
+    magtag.splash.append(temp_group)
+    magtag.splash.append(precip_group)
+    magtag.splash.append(hour_group)
 
-magtag.splash.append(temp_group)
-magtag.splash.append(precip_group)
-magtag.splash.append(hour_group)
+    print("Refreshing...")
+    time.sleep(magtag.display.time_to_refresh + 1)
+    magtag.display.refresh()
+    time.sleep(magtag.display.time_to_refresh + 1)
 
-
-
-print("Refreshing...")
-time.sleep(magtag.display.time_to_refresh + 1)
-magtag.display.refresh()
-time.sleep(magtag.display.time_to_refresh + 1)
-
-print("Sleeping...")
-go_to_sleep(local_time)
+    print("Sleeping...")
+    go_to_sleep(local_time)
+except Exception as e:
+    show_error("ERROR", type(e).__name__, (255, 255, 255))
 #  entire code will run again after deep sleep cycle
 #  similar to hitting the reset button
 
