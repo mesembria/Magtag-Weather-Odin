@@ -1,15 +1,16 @@
 # MagTag Weather Odin
 
-A CircuitPython project that displays weather information in a clean, user-friendly format on an Adafruit MagTag e-paper display. Inspired by the Odin display from the Carrot Weather app, this project provides an easy-to-read daily weather forecast that updates periodically.
+A CircuitPython project that displays an hourly weather forecast in a clean, minimalist format on an Adafruit MagTag e-paper display. Inspired by the Odin display from the Carrot Weather app, it renders 9 hourly columns showing temperature (with weather icons at relative heights), precipitation probability bars, and hour labels. After rendering, the device enters deep sleep until the next update.
 
 ## Features
 
-- Clean, minimalist weather display
-- Current temperature and weather conditions
-- Battery-efficient e-paper display
-- WiFi-enabled automatic updates
-- Weather icon support
-- CircuitPython-based for easy customization
+- 9-column hourly forecast display (every 2 hours)
+- Weather icons positioned vertically by temperature relative to day's range
+- Precipitation probability bars with percentage labels (shown when >30%)
+- Hour labels (e.g., `6A`, `2P`)
+- Battery-efficient e-paper display with deep sleep between updates
+- Smart sleep schedule: pauses 8pm–6am, updates every 2 hours otherwise
+- WiFi-enabled automatic updates via Google Maps Platform Weather API
 
 ## Hardware Requirements
 
@@ -20,11 +21,11 @@ A CircuitPython project that displays weather information in a clean, user-frien
 ## Installation
 
 1. Set up your MagTag with CircuitPython:
-   - Download the latest [CircuitPython for MagTag](https://circuitpython.org/board/adafruit_magtag_2.9_grayscale/)
+   - Tested with **CircuitPython 9.0.4** — download from [circuitpython.org](https://circuitpython.org/board/adafruit_magtag_2.9_grayscale/)
    - Follow the [CircuitPython installation guide](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython)
 
 2. Install required libraries:
-   - Download the [CircuitPython Library Bundle](https://circuitpython.org/libraries)
+   - Download the **CircuitPython 9.x [Library Bundle](https://circuitpython.org/libraries)**
    - Copy the following libraries to your MagTag's `lib` folder:
      - adafruit_magtag
      - adafruit_bitmap_font
@@ -37,36 +38,34 @@ A CircuitPython project that displays weather information in a clean, user-frien
 
 3. Project files:
    - Clone this repository or download the files
-   - Copy all files to your MagTag's root directory
-   - Update `secrets.py` with your configuration (see Configuration section)
+   - Copy `code.py`, `bmps/`, and your populated `secrets.py` to your MagTag's root directory
 
 ## Configuration
 
-Create or update `secrets.py` with the following information:
+Create or update `secrets.py` with the following:
 ```python
 secrets = {
     'ssid': 'your_wifi_ssid',
     'password': 'your_wifi_password',
-    'openweather_token': 'your_api_token',
-    'latitude': 'your_latitude',
-    'longitude': 'your_longitude'
+    'google_weather_key': 'your_api_key',
+    'lat': '37.21350',
+    'long': '-80.03739',
 }
 ```
 
 ### API Setup
-This project uses the [OpenWeather One Call API 3.0](https://openweathermap.org/api). To get an API token:
-1. Create an account at [OpenWeatherMap](https://openweathermap.org/)
-2. Generate an API key in your account dashboard
-3. The free tier includes 1,000 calls/day, sufficient for personal use
+This project uses the [Google Maps Platform Weather API](https://developers.google.com/maps/documentation/weather) (powered by Google DeepMind MetNet). To get an API key:
+1. Create or sign in to a [Google Cloud](https://console.cloud.google.com/) account
+2. Enable the **Weather API** in the API Library
+3. Create an API key under **Credentials**
+4. Restrict the key to the Weather API for security
 
-## Future Enhancements
-
-- [ ] Support for multiple eInk displays
-- [ ] Add location and time display
-- [ ] Battery life optimization and benchmarking
-- [ ] Button-activated display modes
-- [ ] Metric unit support
-- [ ] Official Adafruit Learning System Guide
+### Offline Debugging
+A saved API response (`google_response.txt`) is included for testing without WiFi. In `code.py`, swap the live fetch in `get_forecast()`:
+```python
+# resp = magtag.network.fetch(get_data_source_url(lat, long))
+resp = Fake_Requests("google_response.txt")
+```
 
 ## Inspiration
 This project is based on the [MagTag Daily Weather Forecast Display](https://learn.adafruit.com/magtag-weather/) and inspired by the Carrot Weather app's Odin display:
