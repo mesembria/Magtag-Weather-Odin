@@ -63,6 +63,15 @@ ICON_MAP = {
 }
 
 
+def parse_iso_to_epoch(s):
+    # s = "YYYY-MM-DDTHH:MM:SSZ"
+    return int(time.mktime(time.struct_time((
+        int(s[0:4]), int(s[5:7]), int(s[8:10]),
+        int(s[11:13]), int(s[14:16]), int(s[17:19]),
+        0, -1, -1
+    ))))
+
+
 magtag = MagTag()
 
 icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
@@ -88,28 +97,26 @@ def get_icon(condition_type, is_daytime):
     return entry
 
 
-def get_data_source_url(lat, long):
+def get_data_source_url(lat, lng):
     """
-    This function builds and returns the URL for the OpenWeather API.
+    This function builds and returns the URL for the Google Weather API.
 
     Parameters:
     lat (float): The latitude of the location for which weather data is required.
-    long (float): The longitude of the location for which weather data is required.
+    lng (float): The longitude of the location for which weather data is required.
 
     Returns:
-    str: The complete URL for the OpenWeather API with the provided latitude and longitude.
+    str: The complete URL for the Google Weather API with the provided latitude and longitude.
 
     Note:
-    The function uses a global variable 'secrets' which is a dictionary containing the 'openweather_token'.
-    Make sure to define this variable and set the 'openweather_token' before calling this function.
+    The function uses a global variable 'secrets' which is a dictionary containing the 'google_weather_key'.
+    Make sure to define this variable and set the 'google_weather_key' before calling this function.
     """
-
-    URL = "https://api.openweathermap.org/data/3.0/onecall?"
-    URL += "&lat={}".format(lat)
-    URL += "&lon={}".format(long)
-    URL += "&units=imperial"
-
-    return URL + "&appid=" + secrets["openweather_token"]
+    return (
+        "https://weather.googleapis.com/v1/forecast/hours:lookup"
+        "?location.latitude={}&location.longitude={}"
+        "&hours=24&key={}".format(lat, lng, secrets["google_weather_key"])
+    )
 
 
 def get_forecast(lat, long):
