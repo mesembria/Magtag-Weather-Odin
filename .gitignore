@@ -1,0 +1,13 @@
+# CircuitPython libraries — download from the library bundle matching your CP version
+lib/
+
+# Device and runtime artifacts
+boot_out.txt
+__pycache__/
+
+# Local scratch files
+response.txt
+secrets.py
+
+# Editor
+.vscode/

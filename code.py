@@ -6,6 +6,8 @@
 import time
 import terminalio
 import displayio
+import alarm
+import board
 import adafruit_imageload
 from adafruit_display_text import label
 from adafruit_magtag.magtag import MagTag
@@ -18,101 +20,135 @@ from adafruit_fakerequests import Fake_Requests
 # Define various assets
 # ----------------------------
 ICONS_SMALL_FILE = "/bmps/weather_icons_20px.bmp"
-ICON_MAP = {"01d": 0, "01n": 9, "02d": 1, "02n": 10, "03X": 2, "04X": 3, "09X": 4, "10X": 5, "11X": 6, "13X": 7, "50X": 8}
+ICON_MAP = {
+    "CLEAR":                    (0, 9),
+    "MOSTLY_CLEAR":             (0, 9),
+    "PARTLY_CLOUDY":            (1, 10),
+    "MOSTLY_CLOUDY":            2,
+    "CLOUDY":                   3,
+    "WINDY":                    11,
+    "WIND_AND_RAIN":            4,
+    "LIGHT_RAIN":               5,
+    "LIGHT_RAIN_SHOWERS":       5,
+    "CHANCE_OF_SHOWERS":        5,
+    "SCATTERED_SHOWERS":        5,
+    "LIGHT_TO_MODERATE_RAIN":   5,
+    "RAIN_SHOWERS":             4,
+    "HEAVY_RAIN_SHOWERS":       4,
+    "RAIN":                     4,
+    "MODERATE_TO_HEAVY_RAIN":   4,
+    "HEAVY_RAIN":               4,
+    "RAIN_PERIODICALLY_HEAVY":  4,
+    "THUNDERSTORM":             6,
+    "THUNDERSHOWER":            6,
+    "LIGHT_THUNDERSTORM_RAIN":  6,
+    "SCATTERED_THUNDERSTORMS":  6,
+    "HEAVY_THUNDERSTORM":       6,
+    "HAIL":                     6,
+    "HAIL_SHOWERS":             6,
+    "LIGHT_SNOW_SHOWERS":       7,
+    "CHANCE_OF_SNOW_SHOWERS":   7,
+    "SCATTERED_SNOW_SHOWERS":   7,
+    "SNOW_SHOWERS":             7,
+    "HEAVY_SNOW_SHOWERS":       7,
+    "LIGHT_TO_MODERATE_SNOW":   7,
+    "MODERATE_TO_HEAVY_SNOW":   7,
+    "SNOW":                     7,
+    "LIGHT_SNOW":               7,
+    "HEAVY_SNOW":               7,
+    "SNOWSTORM":                7,
+    "SNOW_PERIODICALLY_HEAVY":  7,
+    "HEAVY_SNOW_STORM":         7,
+    "BLOWING_SNOW":             7,
+    "RAIN_AND_SNOW":            7,
+    # Fog / atmospheric (tile 8)
+    "FOG":                      8,
+    "FOGGY":                    8,
+    "HAZE":                     8,
+    "SMOKE":                    8,
+    # Freezing / mixed precip (tile 5 = light rain)
+    "DRIZZLE":                  5,
+    "FREEZING_DRIZZLE":         5,
+    "FREEZING_RAIN":            5,
+    "SLEET":                    7,
+    "ICE_PELLETS":              7,
+    "TYPE_UNSPECIFIED":         0,
+}
+
+
+def parse_iso_to_epoch(s):
+    # s = "YYYY-MM-DDTHH:MM:SSZ"
+    return int(time.mktime(time.struct_time((
+        int(s[0:4]), int(s[5:7]), int(s[8:10]),
+        int(s[11:13]), int(s[14:16]), int(s[17:19]),
+        0, -1, -1
+    ))))
 
 
 magtag = MagTag()
 
-icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
-
 
 # /////////////////////////////////////////////////////////////////////////
 
-def get_icon(code):
+def get_icon(condition_type, is_daytime):
     """
-    This function retrieves the corresponding icon for a given weather code.
+    This function retrieves the corresponding icon for a given Google Weather condition type.
 
     Parameters:
-    code (str): A string representing the weather code. The weather code is expected 
-    to be in the format 'XYn', where 'X' and 'Y' are any characters, and 'n' is a digit.
+    condition_type (str): A string representing the Google Weather condition type enum.
+    is_daytime (bool): Whether it is currently daytime (True) or nighttime (False).
 
     Returns:
-    str: The icon corresponding to the given weather code. If no exact match is found, 
-    the function returns the icon for the 'XYX' code. If no 'XYX' code exists, 
-    the function returns None.
-
-    """    
-    for icon in ICON_MAP:
-        if icon[:2] == code[:2]:
-            if icon[2:3] == "X":
-                return ICON_MAP[icon]
-            elif icon[2:3] == code[2:3]:
-                return ICON_MAP[icon]
-
-
-def get_data_source_url(lat, long):
+    int: The icon tile index (0–11) corresponding to the given condition type and time of day.
+    Unknown condition types default to tile 0.
     """
-    This function builds and returns the URL for the OpenWeather API.
+    entry = ICON_MAP.get(condition_type, 0)
+    if isinstance(entry, tuple):
+        return entry[0] if is_daytime else entry[1]
+    return entry
+
+
+def get_data_source_url(lat, lng):
+    """
+    This function builds and returns the URL for the Google Weather API.
 
     Parameters:
     lat (float): The latitude of the location for which weather data is required.
-    long (float): The longitude of the location for which weather data is required.
+    lng (float): The longitude of the location for which weather data is required.
 
     Returns:
-    str: The complete URL for the OpenWeather API with the provided latitude and longitude.
+    str: The complete URL for the Google Weather API with the provided latitude and longitude.
 
     Note:
-    The function uses a global variable 'secrets' which is a dictionary containing the 'openweather_token'.
-    Make sure to define this variable and set the 'openweather_token' before calling this function.
+    The function uses a global variable 'secrets' which is a dictionary containing the 'google_weather_key'.
+    Make sure to define this variable and set the 'google_weather_key' before calling this function.
     """
-
-    URL = "https://api.openweathermap.org/data/3.0/onecall?"
-    URL += "&lat={}".format(lat)
-    URL += "&lon={}".format(long)
-    URL += "&units=imperial"
-
-    return URL + "&appid=" + secrets["openweather_token"]
+    return (
+        "https://weather.googleapis.com/v1/forecast/hours:lookup"
+        "?location.latitude={}&location.longitude={}"
+        "&hours=24&key={}".format(lat, lng, secrets["google_weather_key"])
+    )
 
 
-def get_forecast(lat, long):
-    """Use OneCall API to fetch forecast and timezone data."""
-    resp = magtag.network.fetch(get_data_source_url(lat=lat, long=long))
-    #resp = Fake_Requests("response.txt")
+def parse_forecast(resp):
+    """Parse Google Weather API response into forecast hours and local epoch time."""
     json_data = resp.json()
-    # Would be nice to have error checking here
-    return json_data["hourly"], json_data["current"]["dt"], json_data["timezone_offset"]
+    hours = json_data["forecastHours"]
+    utc_epoch = parse_iso_to_epoch(hours[0]["interval"]["startTime"])
+    tz_offset = int(hours[0]["displayDateTime"]["utcOffset"].rstrip("s"))
+    return hours, utc_epoch + tz_offset
 
-def format_forcast_data(forecast_data, local_tz_offset):
-    """
-    This function formats the forecast data for each hour.
-
-    Parameters:
-    forecast_data (list): A list of dictionaries where each dictionary contains weather forecast data for a specific hour.
-    local_tz_offset (int): The timezone offset in seconds for the location for which the forecast data is obtained.
-
-    Returns:
-    list: A list of dictionaries where each dictionary contains formatted weather forecast data for a specific hour.
-
-    Each dictionary in the returned list has the following keys:
-    - "time": The timestamp of the forecast data.
-    - "hour": The hour of the day (in local time) for which the forecast data is applicable.
-    - "temp": The forecasted temperature.
-    - "icon": The icon code for the forecasted weather condition.
-    - "pop": The probability of precipitation.
-    """    
+def format_forcast_data(forecast_data):
+    """Format Google Weather API hourly data into display-ready dicts."""
     hour_list = []
-
-    # Assuming this is ordered list
     for hour_obj in forecast_data:
-        hr_forecast = {};
-        date = time.localtime(hour_obj["dt"]+local_tz_offset)
-        hr_forecast["time"] = hour_obj["dt"]
-        hr_forecast["hour"] = date[3]
-        hr_forecast["temp"] = hour_obj["temp"]
-        hr_forecast["icon"] =hour_obj["weather"][0]["icon"]
-        hr_forecast["pop"] = hour_obj["pop"]
-        hour_list.append(hr_forecast)
-
+        hr = {}
+        hr["hour"] = hour_obj["displayDateTime"]["hours"]
+        hr["temp"] = hour_obj["temperature"]["degrees"] * 9 / 5 + 32
+        hr["icon"] = hour_obj["weatherCondition"]["type"]
+        hr["is_daytime"] = hour_obj["isDaytime"]
+        hr["pop"] = hour_obj["precipitation"]["probability"]["percent"] / 100
+        hour_list.append(hr)
     return hour_list
 
 def get_temp_range(hour_list):
@@ -132,7 +168,7 @@ def get_temp_range(hour_list):
     min_temp = 100
     range = 0
 
-    for hour_obj in forecast_data:
+    for hour_obj in hour_list:
         if hour_obj["temp"] > max_temp:
             max_temp = hour_obj["temp"]
         if hour_obj["temp"] < min_temp:
@@ -166,7 +202,7 @@ def build_temp_group(hour_list, x, y, group_height, num_hours, hour_step):
     group = displayio.Group(x=x,y=y)
 
     col_width = int(width / num_hours)
-    min_temp, temp_range = get_temp_range(hour_list, 24)
+    min_temp, temp_range = get_temp_range(hour_list)
 
     icon_temp_height = 20 + 10
 
@@ -194,7 +230,7 @@ def build_temp_group(hour_list, x, y, group_height, num_hours, hour_step):
             tile_height=20,
         )
         group.append(icon)
-        icon_index = get_icon(hour_list[hour_index]["icon"])
+        icon_index = get_icon(hour_list[hour_index]["icon"], hour_list[hour_index]["is_daytime"])
         icon[0] = icon_index
 
         # Temperature
@@ -296,29 +332,76 @@ def build_hour_group(hour_list, x, y, group_height, num_hours, hour_step):
 
     return group
 
+
+def _make_button_alarms():
+    """Create button alarms for all four MagTag buttons."""
+    return [
+        alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_B, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_C, value=False, pull=True),
+        alarm.pin.PinAlarm(pin=board.BUTTON_D, value=False, pull=True),
+    ]
+
+
 def go_to_sleep(current_time):
-    """Enter deep sleep for time needed."""
-    # compute current time offset in seconds
+    """Enter deep sleep until next sync time; any button press also wakes the device."""
     hour, minutes, seconds = time.localtime(current_time)[3:6]
 
-    # if after 8pm, sleep until 6am
     if hour > 20:
-        seconds_to_sleep = ((((24-hour) * 60) - minutes) + (6 * 60)) * 60
-    # else if after midnight, but before 6, sleep till 6am
+        seconds_to_sleep = ((((24 - hour) * 60) - minutes) + (6 * 60)) * 60
     elif hour < 6:
-        seconds_to_sleep = (((6-hour) * 60) - minutes) * 60
-    # else, sleep until the next hour
+        seconds_to_sleep = (((6 - hour) * 60) - minutes) * 60
     else:
-        seconds_to_sleep = (((hour % 2) * 60) + (60-minutes)) * 60
+        seconds_to_sleep = (((hour % 2) * 60) + (60 - minutes)) * 60
 
     print(
         "Sleeping for {} hours, {} minutes".format(
             seconds_to_sleep // 3600, (seconds_to_sleep // 60) % 60
         )
     )
-    magtag.exit_and_deep_sleep(seconds_to_sleep)
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + seconds_to_sleep)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *_make_button_alarms())
 
 
+def show_error(title, detail, led_color):
+    """Show an error screen on the e-ink display, signal via neopixels, then deep sleep 30 min."""
+    print("Error:", title, "-", detail)
+
+    magtag.peripherals.neopixels.fill(led_color)
+
+    while len(magtag.splash) > 0:
+        magtag.splash.pop()
+
+    error_group = displayio.Group()
+
+    bg = Rect(0, 0, magtag.graphics.display.width, magtag.graphics.display.height, fill=0xFFFFFF)
+    error_group.append(bg)
+
+    title_label = label.Label(terminalio.FONT, text=title, color=0x000000, scale=2)
+    title_label.anchor_point = (0.5, 0)
+    title_label.anchored_position = (magtag.graphics.display.width // 2, 20)
+    error_group.append(title_label)
+
+    detail_label = label.Label(terminalio.FONT, text=detail, color=0x000000)
+    detail_label.anchor_point = (0.5, 0)
+    detail_label.anchored_position = (magtag.graphics.display.width // 2, 68)
+    error_group.append(detail_label)
+
+    sync_label = label.Label(terminalio.FONT, text="Press any button to sync", color=0x000000)
+    sync_label.anchor_point = (0.5, 0)
+    sync_label.anchored_position = (magtag.graphics.display.width // 2, 92)
+    error_group.append(sync_label)
+
+    magtag.splash.append(error_group)
+
+    time.sleep(magtag.display.time_to_refresh + 1)
+    magtag.display.refresh()
+    time.sleep(magtag.display.time_to_refresh + 1)
+
+    magtag.peripherals.neopixels.fill((0, 0, 0))
+
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 1800)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, *_make_button_alarms())
 
 
 
@@ -326,41 +409,68 @@ def go_to_sleep(current_time):
 #  M A I N
 # ===========
 
+voltage = magtag.peripherals.battery
+if voltage < 3.5:
+    show_error(
+        "LOW BATTERY",
+        "Charge soon ({:.1f}V)".format(voltage),
+        (255, 255, 0)
+    )
 
-print("Fetching forecast...")
+try:
+    icons_small_bmp, icons_small_pal = adafruit_imageload.load(ICONS_SMALL_FILE)
+except OSError:
+    show_error("MISSING FILE", "weather_icons_20px.bmp not found", (255, 255, 255))
+
 lat = secrets["lat"]
 long = secrets["long"]
-forecast_data, utc_time, local_tz_offset = get_forecast(lat, long)
 
-hour_list = format_forcast_data(forecast_data, local_tz_offset)
+print("Fetching forecast...")
+try:
+    resp = magtag.network.fetch(get_data_source_url(lat, long))
+except (ConnectionError, OSError):
+    show_error("NO NETWORK", "Could not connect to WiFi", (255, 0, 0))
 
+if resp.status_code != 200:
+    show_error(
+        "API ERROR",
+        "Server returned {}".format(resp.status_code),
+        (255, 165, 0)
+    )
 
-num_hours = 9
-hour_step = 2
+try:
+    forecast_data, local_time = parse_forecast(resp)
+except (KeyError, ValueError, IndexError):
+    show_error("DATA ERROR", "Unexpected API response", (128, 0, 128))
 
-height = magtag.graphics.display.height
-pop_height = 18
-hour_height = 16
-temp_height = int(height - pop_height - hour_height)+2
+try:
+    hour_list = format_forcast_data(forecast_data)
 
-# Draw the temp, the precip chance, and then the hours
-temp_group = build_temp_group(hour_list, 0, 0, temp_height, num_hours, hour_step)
-precip_group = build_precip_display(hour_list, 0, temp_height, pop_height, num_hours, hour_step)
-hour_group = build_hour_group(hour_list, 0, temp_height+pop_height+4, hour_height, num_hours, hour_step)
+    num_hours = 9
+    hour_step = 2
 
-magtag.splash.append(temp_group)
-magtag.splash.append(precip_group)
-magtag.splash.append(hour_group)
+    height = magtag.graphics.display.height
+    pop_height = 18
+    hour_height = 16
+    temp_height = int(height - pop_height - hour_height) + 2
 
+    temp_group = build_temp_group(hour_list, 0, 0, temp_height, num_hours, hour_step)
+    precip_group = build_precip_display(hour_list, 0, temp_height, pop_height, num_hours, hour_step)
+    hour_group = build_hour_group(hour_list, 0, temp_height + pop_height + 4, hour_height, num_hours, hour_step)
 
+    magtag.splash.append(temp_group)
+    magtag.splash.append(precip_group)
+    magtag.splash.append(hour_group)
 
-print("Refreshing...")
-time.sleep(magtag.display.time_to_refresh + 1)
-magtag.display.refresh()
-time.sleep(magtag.display.time_to_refresh + 1)
+    print("Refreshing...")
+    time.sleep(magtag.display.time_to_refresh + 1)
+    magtag.display.refresh()
+    time.sleep(magtag.display.time_to_refresh + 1)
 
-print("Sleeping...")
-go_to_sleep(utc_time + local_tz_offset)
+    print("Sleeping...")
+    go_to_sleep(local_time)
+except Exception as e:
+    show_error("ERROR", type(e).__name__, (255, 255, 255))
 #  entire code will run again after deep sleep cycle
 #  similar to hitting the reset button
 
